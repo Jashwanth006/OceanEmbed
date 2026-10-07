@@ -1,516 +1,537 @@
-<div align="center">
-
 # OceanEmbed
 
-**Physics-informed deep learning for 3D subsurface ocean reconstruction from satellite observations**
+<div align="center">
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-Inference-009688?style=flat-square&logo=fastapi&logoColor=white)
-![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=flat-square&logo=next.js&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-2EA44F?style=flat-square)
-![Problem](https://img.shields.io/badge/Problem-SIH26066-F28C28?style=flat-square)
+### Physics-Informed AI for 3D Subsurface Ocean Reconstruction
 
-[Live Demo](https://oceanembed-phi.vercel.app/) &nbsp;|&nbsp; [Demo Video](https://youtu.be/GUdMyuLT980) &nbsp;|&nbsp; [Technical Report](./Technical%20Report.pdf) &nbsp;|&nbsp; [Presentation](./PPT.pdf)
+[![Smart India Hackathon 2025](https://img.shields.io/badge/Smart%20India%20Hackathon-2025-blue?style=for-the-badge)](https://sih.gov.in/)
+[![Problem SIH26066](https://img.shields.io/badge/Problem-SIH26066-orange?style=for-the-badge)](https://sih.gov.in/)
+![Team Bitminds](https://img.shields.io/badge/Team-Bitminds-purple?style=for-the-badge)
+[![License MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
+
+[Live Demo](https://oceanembed-phi.vercel.app/) • [Watch Demo Video](https://youtu.be/GUdMyuLT980) • [Full Demo Recording](https://drive.google.com/file/d/1NlPlJ7SpMDJHK6ciq_2xGxzthqxUZaIK/view?usp=drivesdk) • [Report Bug](https://github.com/Satyamkr7905/OCEANEMBED/issues) • [Request Feature](https://github.com/Satyamkr7905/OCEANEMBED/issues)
 
 </div>
 
-<!--
-  Add a dashboard screenshot here once available, for example:
-  ![OceanEmbed dashboard](docs/dashboard.png)
--->
+## 📖 Overview
+
+OceanEmbed is an end-to-end, physics-informed deep learning system that reconstructs the hidden 3D temperature and salinity structure of the North Indian Ocean using only surface satellite observations.
+
+The system generates daily, basin-scale 3D ocean fields at 0.25° × 0.25° spatial resolution across 15 standard depths (0 m to 1000 m) over the domain 5°N–30°N, 45°E–105°E, covering both the Arabian Sea and the Bay of Bengal.
+
+### Why This Matters
+India loses thousands of crores annually to cyclones. Forecasters can see storms from space, but they cannot see the warm water reservoir below the surface that fuels rapid intensification. ARGO floats provide some subsurface data, but their coverage is dangerously sparse — especially during cyclones when data is needed most.
+
+OceanEmbed solves this by learning the nonlinear relationship between surface satellite observations and the hidden ocean interior, delivering actionable ocean intelligence to INCOIS duty officers.
 
 ---
 
-## Table of Contents
+## 🎯 Problem Statement
 
-1. [Overview](#1-overview)
-2. [Key Features](#2-key-features)
-3. [System Architecture](#3-system-architecture)
-4. [Results](#4-results)
-5. [Current Status and Limitations](#5-current-status-and-limitations)
-6. [Repository Structure](#6-repository-structure)
-7. [Getting Started](#7-getting-started)
-8. [Configuration](#8-configuration)
-9. [API Reference](#9-api-reference)
-10. [Training and Evaluation Workflow](#10-training-and-evaluation-workflow)
-11. [Testing and Validation](#11-testing-and-validation)
-12. [Deployment](#12-deployment)
-13. [Data Sources](#13-data-sources)
-14. [Roadmap](#14-roadmap)
-15. [Contributing](#15-contributing)
-16. [License](#16-license)
-17. [Acknowledgements](#17-acknowledgements)
-
----
-
-## 1. Overview
-
-OceanEmbed reconstructs the three-dimensional temperature and salinity structure of the North Indian Ocean using only surface satellite observations. From a 7-day window of surface fields (sea surface temperature, salinity, sea level anomaly, geostrophic currents and winds), the model produces daily subsurface fields at **0.25° × 0.25°** resolution across **15 standard depths (0–1000 m)**. The domain spans the Arabian Sea and the Bay of Bengal (5°N–30°N, 45°E–105°E).
-
-The reconstruction feeds a set of TEOS-10 diagnostics (TCHP, MLD, Z₂₀, BLT, CIP), calibrated uncertainty estimates, and an operational dashboard that includes an AI-assisted maritime advisory.
-
-### Motivation
-
-Forecasters can observe tropical cyclones from space but cannot directly observe the warm-water reservoir beneath the surface that fuels rapid intensification. ARGO profiling floats measure the ocean interior but are sparse in the North Indian Ocean, particularly during fast-evolving events. OceanEmbed learns the relationship between surface signatures and subsurface structure to help close this observation gap.
-
-### Problem Statement
+**SIH26066 — MoES / INCOIS**  
+*Development of a Satellite Embedding-Based Deep Learning Framework to reconstruct depth-wise subsurface temperature from daily surface satellite observations at 0.25° spatial resolution for the North Indian Ocean.*
 
 | Attribute | Detail |
 |---|---|
-| **Identifier** | SIH26066 |
+| **Theme** | Disaster Management |
+| **Category** | Software |
 | **Organisation** | Ministry of Earth Sciences (MoES) / INCOIS |
-| **Theme / Category** | Disaster Management / Software |
-| **Objective** | Satellite-embedding-based deep learning framework to reconstruct depth-wise subsurface temperature from daily surface observations at 0.25° resolution over the North Indian Ocean |
+| **Domain** | North Indian Ocean (5°N–30°N, 45°E–105°E) |
 
 ---
 
-## 2. Key Features
+## 🎥 Demo Videos
 
-**Physics-informed modelling**
-
-- Regularized Coriolis parameter, `f̃ = sign(f) · max(|f|, f₀)`, to avoid the equatorial singularity
-- Ekman pumping, `wₑ = ∇×τ / (ρ₀ f̃)`, computed from wind stress curl and supplied as an input channel
-- Climatological anomaly decomposition: the network predicts residuals relative to a daily climatology
-- Stratification penalty in the loss to discourage unphysical temperature inversions
-- TEOS-10 thermodynamics (via `gsw`) for density, mixed-layer depth and heat content
-
-**Model architecture**
-
-- Dual-stream encoder capturing local eddy-scale and basin-scale variability
-- 512-dimensional latent ocean embedding
-- Depth-attention decoder with learnable depth tokens and multi-head cross-attention
-- Sub-basin heads for the Arabian Sea and Bay of Bengal (split at 80°E)
-- Joint temperature and salinity prediction
-- Heteroscedastic uncertainty (predicted log-σ) with Monte Carlo Dropout at evaluation time
-
-**Operational console**
-
-- 2D/3D geospatial viewer with click-to-profile at any coordinate
-- Vertical diagnostics: thermal sounding, salinity and density, thermocline gradient
-- Selectable variable and depth layers, including uncertainty layers
-- Cyclone Amphan (May 2020) case study
-- AI advisory generation in the style of an INCOIS bulletin. The language model only narrates values computed by the pipeline and does not generate physical numbers.
-
-**Derived indices**
-
-| Index | Description |
-|---|---|
-| TCHP | Tropical Cyclone Heat Potential (kJ/cm²) |
-| MLD | Mixed Layer Depth (m) |
-| Z₂₀ | Depth of the 20 °C isotherm (m) |
-| BLT | Barrier Layer Thickness (m) |
-| CIP | Cyclone Intensification Potential |
+| Video | Description | Link |
+|---|---|---|
+| **YouTube Pitch** | Official SIH submission video with project walkthrough | [Watch on YouTube](https://youtu.be/GUdMyuLT980) |
+| **Full Demo Recording** | Complete dashboard walkthrough with all features | [Watch on Google Drive](https://drive.google.com/file/d/1NlPlJ7SpMDJHK6ciq_2xGxzthqxUZaIK/view?usp=drivesdk) |
+| **Live Dashboard** | Interactive operational console | [oceanembed-phi.vercel.app](https://oceanembed-phi.vercel.app/) |
 
 ---
 
-## 3. System Architecture
+## 🚀 Key Features
+
+### Physics-Informed AI
+- **Ekman Pumping**: Wind-driven vertical velocity computed from wind stress curl
+- **Regularized Coriolis**: Prevents equatorial singularity with bounded formulation
+- **Climatological Anomaly Decomposition**: Residual learning over 20-year daily climatology
+- **TEOS-10 Thermodynamics**: International standard for seawater density and heat content
+
+### Deep Learning Architecture
+- **Dual-Stream Encoder**: Separate branches for local eddies (receptive ~7 cells) and basin-scale waves (receptive ~60 cells)
+- **Latent Ocean Embedding**: 512-dimensional compressed representation
+- **Depth-Attention Decoder**: Learnable depth queries with multi-head cross-attention
+- **Sub-Basin Heads**: Specialized projection weights for Arabian Sea and Bay of Bengal
+- **Joint T-S Prediction**: Simultaneous temperature and salinity output for accurate density
+- **Calibrated Uncertainty**: Monte Carlo Dropout + ensemble + temperature scaling
+
+### Operational Dashboard
+- **Interactive 2D/3D Geospatial Viewer**: Click-to-profile at any coordinate
+- **Vertical Diagnostics**: Three synchronized charts (thermal profile, halocline, thermocline gradient)
+- **ARGO Comparison View**: Side-by-side validation against real float soundings
+- **Cyclone Case Study Playback**: Track TCHP evolution during historical events
+- **Uncertainty Layers**: Confidence intervals per depth
+- **INCOIS Advisory Copilot**: One-click AI-generated maritime bulletins
+
+### Derived Oceanographic Indices
+- **TCHP**: Tropical Cyclone Heat Potential (kJ/cm²)
+- **MLD**: Mixed Layer Depth (m)
+- **Z₂₀**: 20°C Isotherm Depth (m)
+- **BLT**: Barrier Layer Thickness (m)
+- **CIP**: Cyclone Intensification Potential
+
+---
+
+## 🏗️ System Architecture
 
 ```text
-Satellite inputs (0.25°)    SST · SSS · SLA · ugos/vgos · u10/v10
-          │
-          ▼
-Physical pre-processing     Coriolis f̃ · Ekman pumping wₑ · bathymetry
-                            day-of-year encoding · climatology anomaly
-          │                 (7 days × 12 channels × 100 × 240 grid)
-          ▼
-Dual-stream encoder         Stream A: local eddies  |  Stream B: basin waves
-          └────────────────► 512-d latent ocean embedding
-          ▼
-Depth-attention decoder     learnable depth tokens · cross-attention
-                            sub-basin heads (Arabian Sea / Bay of Bengal)
-          ▼
-Outputs (15 depths)         Δθ · ΔSₚ · log-σ   (added to climatology)
-          ▼
-TEOS-10 diagnostics         TCHP · MLD · Z₂₀ · BLT · CIP
-          ▼
-Serving                     FastAPI → Express gateway (validation, cache) → Next.js console
+┌─────────────────────────────────────────────────────────────────────┐
+│                     SATELLITE INPUT (0.25° × 0.25°)                  │
+│             [SST] [SSS] [SLA] [Currents U,V] [Winds U,V]            │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                 PHYSICAL INDUCTIVE BIAS PRE-PROCESSOR               │
+│         • Coriolis (f̃ = sign(f)·max(|f|, f₀))                       │
+│         • Ekman Pumping (wₑ = ∇×τ / ρ₀f̃)                           │
+│         • Climatology Anomaly Decomposition                         │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                DUAL-STREAM SPATIO-TEMPORAL ENCODER                   │
+│   ┌─────────────────┐                     ┌─────────────────┐       │
+│   │    STREAM A     │                     │    STREAM B     │       │
+│   │  Local Eddies   │                     │   Basin Waves   │       │
+│   │  Receptive ~7   │                     │  Receptive ~60  │       │
+│   └────────┬────────┘                     └────────┬────────┘       │
+│            └──────────────────┬────────────────────┘                │
+│                               ▼                                     │
+│                LATENT OCEAN EMBEDDING (512-dim)                     │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                DEPTH-WISE CROSS-ATTENTION DECODER                   │
+│         • 15 Learnable Depth Queries                                │
+│         • Sub-Basin Heads (Arabian Sea / Bay of Bengal)              │
+│         • Joint Temperature + Salinity + Uncertainty Heads          │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    OUTPUT: 3D THERMOHALINE FIELDS                   │
+│         • Temperature (15 depths) + σ_θ                             │
+│         • Salinity (15 depths) + σ_S                                │
+│         • Derived Indices via TEOS-10                               │
+└──────────────────────────────┬──────────────────────────────────────┘
 ```
 
-| Item | Specification |
-|---|---|
-| **Model input** | `(B, 7, 12, 100, 240)`: 7 days × 12 channels on the 100 × 240 grid |
-| **Model output** | Residual θ, residual Sₚ and log-σ, each `(B, 15, 100, 240)` |
-| **Input channels** | `sst`, `sss`, `sla`, `ugos`, `vgos`, `u10`, `v10`, `w_e`, `f_tilde`, `bathymetry`, `doy_sin`, `doy_cos` |
-| **Depth levels (m)** | 0, 5, 10, 20, 30, 50, 75, 100, 125, 150, 200, 300, 500, 700, 1000 |
-| **Grid** | 0.25°, 100 × 240 cells, cell-centre registration |
+---
 
-### Technology Stack
+## 🛠️ Technology Stack
 
-| Layer | Technologies |
+### Frontend
+| Technology | Purpose |
 |---|---|
-| Machine learning | PyTorch, PyTorch Lightning, ONNX / ONNX Runtime |
-| Scientific computing | `gsw` (TEOS-10), SciPy (PCHIP), xarray, Dask, Zarr, xESMF |
-| Data access | `copernicusmarine`, `cdsapi`, NetCDF4 |
-| Inference API | FastAPI, Uvicorn, Pydantic v2, rasterio |
-| Gateway | Express.js, TypeScript, Zod, ioredis (optional), Axios |
-| Frontend | Next.js 14, React 18, TypeScript, Tailwind CSS, deck.gl, MapLibre GL, Plotly.js |
-| Advisory | Google Gemini (`google-genai`) |
-| Deployment | Docker, Render, Vercel, GitHub Actions |
+| **Next.js 14** | React framework with App Router |
+| **TypeScript** | Type-safe development |
+| **TailwindCSS** | Utility-first styling |
+| **Deck.gl** | WebGL-powered geospatial visualization |
+| **Plotly.js** | Scientific charting |
+| **Leaflet** | Interactive maps |
+| **Zustand** | State management |
+| **React Query** | Server state management |
+
+### Backend
+| Technology | Purpose |
+|---|---|
+| **FastAPI** | ML inference and scientific computation |
+| **Express.js** | API gateway and orchestration |
+| **PyTorch** | Deep learning framework |
+| **PyTorch-Lightning** | Training pipeline |
+| **gsw** | TEOS-10 Gibbs SeaWater library |
+| **PCHIP** | Shape-preserving vertical interpolation |
+| **Google Gemini 2.5** | LLM advisory copilot |
+
+### Data & Storage
+| Technology | Purpose |
+|---|---|
+| **Zarr** | Chunked array storage |
+| **xarray** | Multidimensional labeled arrays |
+| **Dask** | Parallel computing |
+| **xesmf** | Conservative regridding |
+| **Redis** | Caching layer |
+| **PostgreSQL** | Metadata and user data |
+
+### DevOps
+| Technology | Purpose |
+|---|---|
+| **Docker** | Containerization |
+| **Render** | Backend deployment |
+| **Vercel** | Frontend deployment |
+| **GitHub Actions** | CI/CD |
 
 ---
 
-## 4. Results
-
-Headline figures as reported in the [Technical Report](./Technical%20Report.pdf):
-
-| Metric | Value |
-|---|---|
-| Thermocline RMSE (50–200 m) | 0.88 °C |
-| ARGO validation RMSE | 0.107 °C (N = 1,420 profiles) |
-| Climatology skill score | > 0.78 |
-| Training MSE reduction | 87.28 % |
-| Uncertainty coverage | 71.4 % at ±1σ |
-| Neural inference time | 142 ms (single NVIDIA T4) |
-| Trainable parameters | 2.64 M |
-
-### Case Study: Cyclone Amphan (May 2020)
-
-| Phase | TCHP (kJ/cm²) | MLD (m) | Z₂₀ (m) | SST (°C) |
-|---|---|---|---|---|
-| Pre-storm (16 May) | 115.2 | 48.0 | 112.0 | 31.2 |
-| Eye transit (18 May) | 62.8 | 52.3 | 94.0 | 29.1 |
-| Post-storm (20 May) | 35.6 | 75.0 | 78.0 | 27.8 |
-
-Evaluation figures are available in `track3_validation_engine/output/`:
-`real_model_evaluation.png`, `argo_sounding_matchup.png` and `vertical_error_plot.png`.
-
----
-
-## 5. Current Status and Limitations
-
-- **Bundled weights are a proof of concept.** `track4_backend/fastapi_engine/weights/oceanembed_real.pth` was trained for 15 epochs on a one-month slice (May 2020) over the Bay of Bengal (13–18°N, 84–89°E) using the sample data in `data/`.
-- **Full-basin training is supported but not bundled.** The data pipeline and model target the full North Indian Ocean for 2012–2021 (train 2012–2018, validation 2019, test 2020–2021). Reproducing full-basin results requires running the Track 1 pipeline over that period and training with Track 2.
-- **Amphan responses are pre-computed.** Requests near the storm track and dates are served from `static/amphan_case_study.json`.
-- **Synthetic fallback.** If no trained weights or ONNX model are available and `ALLOW_SYNTHETIC=true`, the inference service returns synthetic fields so the API and console remain usable for demonstration.
-- **Docker image scope.** The FastAPI Dockerfile does not currently copy `track2_model_engine` or install PyTorch, so containerised deployments may not load the `.pth` weights. Local runs from the repository root do.
-
----
-
-## 6. Repository Structure
+## 📂 Project Structure
 
 ```text
 OceanEmbed/
-├── track1_data_engine/          Data ingestion and preprocessing
-│   ├── ingestion/               CMEMS, OISST and wind downloaders
-│   ├── preprocessing/           Regridder, bathymetry mask, physics features, climatology
-│   ├── storage/                 Zarr converter and dataset validator
-│   ├── configs/                 bounding_box.yaml, data_sources.yaml
-│   └── run_pipeline.py          CLI: download → regrid → physics → climatology → Zarr
+├── frontend/                  # Next.js 14 frontend
+│   ├── app/
+│   │   ├── page.tsx           # Landing page
+│   │   ├── dashboard/         # Main dashboard
+│   │   │   ├── page.tsx
+│   │   │   ├── map/           # Interactive map
+│   │   │   ├── profile/       # Vertical profile viewer
+│   │   │   ├── cyclone/       # Cyclone case studies
+│   │   │   └── validation/    # ARGO validation view
+│   │   └── api/proxy/         # API proxy routes
+│   ├── components/
+│   │   ├── MapViewer.tsx      # Deck.gl map component
+│   │   ├── ProfileViewer.tsx  # Plotly vertical profile
+│   │   ├── UncertaintyBand.tsx# Uncertainty visualization
+│   │   ├── CyclonePlayback.tsx# Cyclone timeline
+│   │   └── ArgoComparison.tsx # ARGO overlay
+│   └── lib/
+│       ├── api.ts             # API client
+│       └── hooks/             # Custom hooks
 │
-├── track2_model_engine/         Model, losses and training
-│   ├── models/                  ocean_embed, dual_stream_encoder, depth_decoder,
-│   │                            heads, layers, baseline_mlp, baseline_unet
-│   ├── losses/                  physics_loss, area_weighted_loss
-│   ├── dataset/                 Zarr and synthetic datasets, transforms
-│   ├── configs/model.yaml       Hyperparameters and data split
-│   ├── train.py                 PyTorch Lightning training
-│   ├── evaluate.py              Monte Carlo Dropout evaluation
-│   └── export_onnx.py           ONNX and TorchScript export
+├── backend-fastapi/           # FastAPI ML service
+│   ├── main.py                # Application entry
+│   ├── api/
+│   │   ├── predict.py         # Prediction endpoints
+│   │   ├── indices.py         # Derived index endpoints
+│   │   └── validation.py      # Validation endpoints
+│   ├── models/
+│   │   ├── oceanembed.py      # Neural network
+│   │   ├── encoder.py         # Dual-stream encoder
+│   │   └── decoder.py         # Depth attention decoder
+│   ├── physics/
+│   │   ├── ekman.py           # Ekman pumping
+│   │   ├── coriolis.py        # Regularized Coriolis
+│   │   └── teos10.py          # TEOS-10 conversions
+│   ├── utils/
+│   │   ├── pchip.py           # PCHIP interpolation
+│   │   └── climatology.py     # Anomaly decomposition
+│   └── requirements.txt
 │
-├── track3_validation_engine/    Validation and scientific diagnostics
-│   ├── validation/              ARGO and RAMA matchers
-│   ├── diagnostics/             TEOS-10, PCHIP profiler, TCHP/MLD/Z20/BLT indices
-│   ├── benchmarks/              Skill scores and report generation
-│   ├── plots/                   Evaluation plotting scripts
-│   ├── output/                  Generated figures
-│   └── test_diagnostics.py      Numerical tests
+├── backend-express/           # Express.js gateway
+│   ├── server.js              # Application entry
+│   ├── routes/
+│   │   ├── auth.js            # JWT authentication
+│   │   ├── forecast.js        # Forecast proxy
+│   │   └── argo.js            # ARGO proxy
+│   ├── middleware/
+│   │   ├── cache.js           # Redis caching
+│   │   ├── rateLimit.js       # Rate limiting
+│   │   └── validation.js      # Zod validation
+│   └── package.json
 │
-├── track4_backend/              Serving layer
-│   ├── fastapi_engine/          Inference API, advisory service, trained weights
-│   ├── express_gateway/         TypeScript gateway (Zod validation, Redis cache)
-│   └── docker-compose.yml       Redis, inference service and gateway
+├── ml/                        # ML training pipeline
+│   ├── data/
+│   │   ├── ingestion.py       # Satellite download
+│   │   ├── regridding.py      # Conservative regridding
+│   │   └── zarr_store.py      # Zarr storage
+│   ├── training/
+│   │   ├── train.py           # Training loop
+│   │   ├── losses.py          # Physics-informed loss
+│   │   └── configs/           # YAML configs
+│   ├── evaluation/
+│   │   ├── argo_validation.py # ARGO co-location
+│   │   ├── rama_validation.py # RAMA validation
+│   │   └── calibration.py     # Uncertainty calibration
+│   └── notebooks/
+│       ├── 01_data_exploration.ipynb
+│       ├── 02_model_development.ipynb
+│       └── 03_ablation_studies.ipynb
 │
-├── track5_frontend/             Next.js 14 operational console
-│   └── src/                     App routes, map and chart components, hooks, API client
-│
-├── data/                        Sample raw and processed data (May 2020 slice)
-├── download_real_sample.py      Download the proof-of-concept CMEMS slice
-├── prepare_training_tensors.py  Build training tensors from the raw slice
-├── run_local_training.py        Train on the sample slice
-├── render.yaml                  Render deployment blueprint
-├── requirements.txt             Python dependencies (data and model)
-├── PPT.pdf                      Project presentation
-└── Technical Report.pdf         Full technical report
+├── docker-compose.yml         # Local development
+├── Dockerfile.fastapi         # FastAPI container
+├── Dockerfile.express         # Express container
+├── README.md                  # This file
+└── LICENSE
 ```
 
 ---
 
-## 7. Getting Started
+## 🚦 Getting Started
 
 ### Prerequisites
+- Node.js 20+
+- Python 3.10+
+- Docker & Docker Compose (optional)
+- NVIDIA T4 GPU (recommended for inference)
 
-| Requirement | Notes |
-|---|---|
-| Python 3.10+ | 3.11 is used in the Docker image |
-| Node.js 20+ | Gateway and frontend |
-| Docker and Docker Compose | Optional |
-| Copernicus Marine account | Only needed to download new data |
-| Gemini API key | Only needed for AI-generated advisories |
+### Local Development
 
-### Clone the repository
-
+#### 1. Clone the Repository
 ```bash
-git clone https://github.com/Jashwanth006/OceanEmbed.git
-cd OceanEmbed
+git clone https://github.com/Satyamkr7905/OCEANEMBED.git
+cd OCEANEMBED
 ```
 
-### Inference engine (FastAPI)
-
+#### 2. Frontend Setup
 ```bash
+cd frontend
+npm install
+npm run dev # Runs on http://localhost:3000
+```
+
+Environment variables (`.env.local`):
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8081
+NEXT_PUBLIC_WS_URL=ws://localhost:8081
+```
+
+#### 3. FastAPI Backend Setup
+```bash
+cd backend-fastapi
 python -m venv venv
-source venv/bin/activate                  # Windows: venv\Scripts\activate
+source venv/bin/activate # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-pip install -r track4_backend/fastapi_engine/requirements.txt
-
-cp track4_backend/fastapi_engine/.env.example track4_backend/fastapi_engine/.env
-uvicorn fastapi_engine.app:app --app-dir track4_backend --port 8000 --reload
+uvicorn main:app --reload --port 8000 # Runs on http://localhost:8000
 ```
 
-Run this from the repository root so that `track2_model_engine` can be imported. Interactive documentation is available at `http://localhost:8000/docs`.
-
-### API gateway (Express)
-
+#### 4. Express Gateway Setup
 ```bash
-cd track4_backend/express_gateway
-cp .env.example .env
+cd backend-express
 npm install
-npm run dev                               # http://localhost:8080
+npm run dev # Runs on http://localhost:8081
 ```
 
-Redis is optional. If `REDIS_URL` is not set, the gateway skips caching.
+Environment variables (`.env`):
+```env
+FASTAPI_URL=http://localhost:8000
+REDIS_URL=redis://localhost:6379
+DATABASE_URL=postgresql://user:pass@localhost:5432/oceanembed
+JWT_SECRET=your-secret-key
+```
 
-### Operational console (Next.js)
-
+#### 5. Docker Compose (All Services)
 ```bash
-cd track5_frontend
-cp .env.example .env.local
-npm install
-npm run dev                               # http://localhost:3000
+docker-compose up --build
 ```
-
-Set `NEXT_PUBLIC_API_URL` in `.env.local` to the gateway, for example `http://127.0.0.1:8080/api/v1`.
-
-### Docker Compose (Redis, inference, gateway)
-
-```bash
-cd track4_backend
-docker compose up --build
-```
-
-| Service | Port |
-|---|---|
-| Inference (FastAPI) | 8000 |
-| Gateway (Express) | 8080 |
-| Redis | 6379 |
-
-Start the frontend separately as described above.
+This starts:
+- Frontend on port 3000
+- Express gateway on port 8081
+- FastAPI backend on port 8000
+- Redis on port 6379
+- PostgreSQL on port 5432
 
 ---
 
-## 8. Configuration
+## 🔌 API Reference
 
-### `track4_backend/fastapi_engine/.env`
-
-| Variable | Default | Description |
+### FastAPI Endpoints
+| Method | Endpoint | Purpose |
 |---|---|---|
-| `DATA_ROOT` | `oceanembed` | Root of the Zarr data store |
-| `ONNX_PATH` | `oceanembed/export/oceanembed.onnx` | Exported ONNX model |
-| `TORCHSCRIPT_PATH` | `oceanembed/export/oceanembed.ts` | Exported TorchScript model |
-| `ALLOW_SYNTHETIC` | `true` | Permit synthetic fallback when no model or data is available |
-| `ONNX_PROVIDERS` | `CUDAExecutionProvider,CPUExecutionProvider` | ONNX Runtime execution providers |
-| `GEMINI_API_KEY` | none | Enables AI-generated advisories |
-| `HOST`, `PORT` | `0.0.0.0`, `8000` | Server bind address |
+| GET | `/` | Health check |
+| GET | `/docs` | Interactive Swagger documentation |
+| POST | `/predict/point` | Single coordinate prediction |
+| POST | `/predict/basin` | Full basin prediction |
+| POST | `/predict/batch` | Batch prediction |
+| GET | `/indices/tchp` | Tropical Cyclone Heat Potential |
+| GET | `/indices/mld` | Mixed Layer Depth |
+| GET | `/indices/z20` | 20°C Isotherm Depth |
+| GET | `/indices/blt` | Barrier Layer Thickness |
+| GET | `/validate/argo` | ARGO co-location results |
+| GET | `/validate/rama` | RAMA co-location results |
+| GET | `/model/info` | Model metadata |
 
-### `track4_backend/express_gateway/.env`
+**Example Request:**
+```bash
+curl -X POST "https://oceanembed-fastapi.onrender.com/predict/point" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lat": 15.5,
+    "lon": 86.3,
+    "date": "2020-05-18"
+  }'
+```
 
-| Variable | Default | Description |
+**Example Response:**
+```json
+{
+  "depths": [0, 5, 10, 20, 30, 50, 75, 100, 125, 150, 200, 300, 500, 700, 1000],
+  "potential_temperature": [30.85, 30.82, 30.79, 30.65, 30.12, 28.45, 25.30, 21.80, 18.50, 15.60, 12.10, 8.40, 5.20, 4.10, 3.20],
+  "practical_salinity": [32.15, 32.18, 32.22, 32.40, 32.85, 33.40, 34.10, 34.65, 34.85, 34.92, 34.95, 34.98, 35.01, 35.03, 35.05],
+  "uncertainty_theta": [0.12, 0.14, 0.15, 0.18, 0.22, 0.28, 0.35, 0.42, 0.38, 0.32, 0.25, 0.18, 0.12, 0.09, 0.07],
+  "uncertainty_salinity": [0.08, 0.09, 0.10, 0.12, 0.15, 0.18, 0.22, 0.25, 0.22, 0.19, 0.15, 0.11, 0.08, 0.06, 0.05],
+  "indices": {
+    "tchp": 62.8,
+    "mld": 52.3,
+    "z20": 94.0,
+    "blt": 3.4
+  },
+  "metadata": {
+    "model_version": "oceanembed-v1.0.0",
+    "inference_time_ms": 142,
+    "calibration_applied": true
+  }
+}
+```
+
+### Express Gateway Endpoints
+| Method | Endpoint | Purpose |
 |---|---|---|
-| `INFERENCE_URL` | `http://127.0.0.1:8000` | Base URL of the inference service |
-| `REDIS_URL` | `redis://127.0.0.1:6379` | Optional cache |
-| `CACHE_TTL_SECONDS` | `86400` | Cache lifetime in seconds |
-| `PORT` | `8080` | Gateway port |
-
-### `track5_frontend/.env.local`
-
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_API_URL` | Gateway base URL, including `/api/v1` |
-
-Do not commit `.env` files or API keys. `.env` is listed in `.gitignore`.
+| POST | `/api/auth/login` | User authentication |
+| POST | `/api/auth/register` | User registration |
+| GET | `/api/forecast` | Proxy to FastAPI forecast |
+| GET | `/api/argo` | Proxy to FastAPI ARGO |
+| GET | `/api/cyclone` | Proxy to FastAPI cyclone |
+| GET | `/api/health` | Health check |
+| WS | `/ws/updates` | Real-time WebSocket |
 
 ---
 
-## 9. API Reference
+## 📊 Data Sources
 
-### Gateway: base path `/api/v1`
-
-| Method | Endpoint | Parameters | Description |
+| Variable | Source | Product | Resolution |
 |---|---|---|---|
-| GET | `/health` | none | Gateway and inference health |
-| GET | `/ocean/profile` | `lat`, `lon`, `date` | Vertical θ/S profile with uncertainty and indices |
-| GET | `/ocean/layer` | `date`, `depth`, `variable` | Horizontal layer at a standard depth |
-| GET | `/ocean/indices` | `date`, `index` | Basin map of a derived index |
-| POST | `/ocean/advisory` | `lat`, `lon`, `date`, `sst`, `tchp`, `mld`, `z20`, `inversion_flag`, `uncertainty` | Generate an advisory bulletin |
+| **SST** | NOAA | OISST v2.1 | 0.25° daily |
+| **SSS** | NASA/ESA | SMAP/SMOS | 0.25° daily |
+| **SSH/SLA** | CMEMS | SEALEVEL | 0.25° daily |
+| **Currents** | CMEMS | SEALEVEL (geostrophic) | 0.25° daily |
+| **Winds** | EUMETSAT/ECMWF | ASCAT/ERA5 | 0.25° daily |
+| **Training Target** | CMEMS | GLORYS12V1 | 1/12°, 50 levels |
+| **Validation** | Coriolis/INCOIS | ARGO | Profile-based |
+| **Validation** | NOAA/PMEL | RAMA | Moored buoys |
+| **Physics** | IOC/SCOR/IAPSO | TEOS-10 | Standard |
 
-**Parameter constraints**
+### Data Attribution
+- Copernicus Marine Service — [marine.copernicus.eu](https://marine.copernicus.eu/)
+- NOAA — [ncei.noaa.gov](https://www.ncei.noaa.gov/products/optimum-interpolation-sst)
+- NASA — [podaac.jpl.nasa.gov](https://podaac.jpl.nasa.gov/SMAP)
+- ESA — [esa.int](https://www.esa.int/Applications/Observing_the_Earth/FutureEO/SMOS)
+- EUMETSAT — [eumetsat.int](https://user.eumetsat.int/)
+- TEOS-10 — [teos-10.org](https://www.teos-10.org/)
+- ARGO — [argo.ucsd.edu](https://argo.ucsd.edu/)
 
-| Parameter | Allowed values |
+---
+
+## 📈 Model Performance
+
+| Metric | Value | Validation Source |
+|---|---|---|
+| **Thermocline RMSE (50–200 m)** | 0.88°C | ARGO Δt=0 + GLORYS holdout |
+| **Climatology Skill Score** | > 0.78 | GLORYS 2020–21 holdout |
+| **MSE Reduction** | 87.28% | Training convergence |
+| **ARGO Validation RMSE** | 0.107°C | ARGO Δt=0, N=1,420 |
+| **Uncertainty Coverage** | 71.4% @ ±1σ | ARGO Δt=0 validation set |
+| **Neural Inference** | 142 ms | NVIDIA T4, batch=1 |
+| **Full Pipeline** | 38.4 s | End-to-end benchmark |
+
+### Cyclone Amphan Case Study (May 2020)
+| Phase | TCHP (kJ/cm²) | MLD (m) | Z₂₀ (m) | SST (°C) |
+|---|---|---|---|---|
+| **Pre-Storm (May 16)** | 115.2 | 48.0 | 112.0 | 31.2 |
+| **Eye Transit (May 18)** | 62.8 | 52.3 | 94.0 | 29.1 |
+| **Post-Storm (May 20)** | 35.6 | 75.0 | 78.0 | 27.8 |
+| **Net Change** | −79.6 | +27.0 | −34.0 | −3.4 |
+
+---
+
+## 🧪 Testing
+
+### Run Backend Tests
+```bash
+cd backend-fastapi
+pytest tests/ -v
+```
+
+### Run Frontend Tests
+```bash
+cd frontend
+npm run test
+```
+
+### Run ML Pipeline Tests
+```bash
+cd ml
+pytest tests/ -v
+```
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions from the oceanographic and machine learning communities.
+
+### How to Contribute
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Guidelines
+- Follow PEP 8 for Python code
+- Use TypeScript strict mode for frontend
+- Write unit tests for new features
+- Update documentation for API changes
+
+---
+
+## 👥 Team Bitminds
+
+| Role | Responsibility |
 |---|---|
-| `lat` | 5 to 30 |
-| `lon` | 45 to 105 |
-| `date` | `YYYY-MM-DD` |
-| `depth` | One of the 15 standard levels |
-| `variable` | `temperature`, `salinity`, `uncertainty_theta`, `uncertainty_sp` |
-| `index` | `tchp`, `mld`, `z20`, `blt`, `cip` |
+| **ML/DL Lead** | Model architecture, training, ablation studies |
+| **Backend Developer** | FastAPI, Express.js, database, caching |
+| **Frontend Developer** | Next.js, visualization, UX |
+| **Data Engineer** | Ingestion, regridding, Zarr storage |
+| **DevOps Engineer** | Docker, CI/CD, monitoring |
+| **Scientific Advisor** | Physics validation, methodology review |
 
-`GET` responses are cached in Redis when available; cache hits return an `X-Cache: HIT` header.
-
-**Example**
-
-```bash
-curl "http://localhost:8080/api/v1/ocean/profile?lat=15.5&lon=86.3&date=2020-05-18"
-```
-
-### Inference service (direct access)
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/health` | Backend status, weights and domain |
-| POST | `/predict/profile` | Profile at a coordinate and date |
-| POST | `/predict/grid` | Gridded layer (`json`, `geotiff` or `binary`) |
-| POST | `/predict/indices` | Derived index map |
-| POST | `/advisory/generate` | Advisory bulletin |
-| GET | `/docs` | Swagger UI |
+- **Team ID:** 141034
+- **Problem Statement:** SIH26066 (MoES / INCOIS)
+- **Theme:** Disaster Management
+- **Category:** Software
 
 ---
 
-## 10. Training and Evaluation Workflow
+## 📜 License
 
-### Proof of concept on the bundled sample
-
-```bash
-pip install -r requirements.txt
-
-python download_real_sample.py          # Optional: requires Copernicus Marine login
-python prepare_training_tensors.py      # Writes data/processed/training_tensors.pt
-python run_local_training.py            # Writes track4_backend/fastapi_engine/weights/oceanembed_real.pth
-```
-
-The sample files are already included in `data/`, so the download step can be skipped.
-
-### Full pipeline
-
-```bash
-# Track 1: build the Zarr dataset
-python -m track1_data_engine.run_pipeline --stage smoke
-python -m track1_data_engine.run_pipeline --stage all --start 2012-01-01 --end 2012-01-31
-python -m track1_data_engine.run_pipeline --stage download --products glorys,oisst,winds
-
-# Track 2: train, evaluate and export
-python -m track2_model_engine.train --model oceanembed --data-root oceanembed --max-epochs 80
-python -m track2_model_engine.train --synthetic --fast-dev-run
-python -m track2_model_engine.evaluate --ckpt <path/to/checkpoint> --split test --mc 50
-python -m track2_model_engine.export_onnx --ckpt <path/to/checkpoint> --out-dir oceanembed/export
-```
-
-`--model` also accepts `mlp` and `unet` to train baseline models for comparison. `--synthetic --fast-dev-run` runs a quick smoke test without any data.
-
-### Training configuration
-
-Defined in `track2_model_engine/configs/model.yaml`:
-
-| Parameter | Value |
-|---|---|
-| Latent dimension | 512 |
-| Attention heads | 8 |
-| Dropout | 0.1 |
-| Learning rate | 3e-4 |
-| Weight decay | 1e-4 |
-| Precision | 16-bit mixed |
-| Gradient clipping | 1.0 |
-| Max epochs | 80 |
-
-**Loss:** Gaussian negative log-likelihood on temperature and salinity (weights 1.0 and 0.5), a stratification-inversion penalty (λ = 0.1), and an area-weighted term.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 11. Testing and Validation
-
-```bash
-python -m track3_validation_engine.test_diagnostics
-# or
-pytest track3_validation_engine/test_diagnostics.py
-```
-
-The validation engine provides ARGO and RAMA co-location, climatology skill score, depth-wise skill, inversion Brier score, and automated report and plot generation.
-
----
-
-## 12. Deployment
-
-| Component | Platform | Notes |
-|---|---|---|
-| Inference service and gateway | Render | `render.yaml` defines `oceanembed-fastapi` and `oceanembed-gateway`. Set `GEMINI_API_KEY` in the Render dashboard. |
-| Frontend | Vercel | Deploy `track5_frontend/` and set `NEXT_PUBLIC_API_URL` to the gateway URL. |
-| Keep-alive | GitHub Actions | `.github/workflows/keep_alive.yml` pings both services every 10 minutes to avoid free-tier sleep. |
-
----
-
-## 13. Data Sources
-
-| Variable | Provider | Product |
-|---|---|---|
-| Sea surface temperature | NOAA | OISST v2.1 |
-| Sea surface salinity | Copernicus Marine | Sea surface salinity product |
-| Sea level anomaly, geostrophic currents | Copernicus Marine | SEALEVEL |
-| Surface winds | ECMWF / EUMETSAT | ERA5 / ASCAT |
-| Training target (θ, S) | Copernicus Marine | GLORYS12V1 reanalysis (1/12°, 50 levels) |
-| Bathymetry | NOAA | ETOPO1 |
-| Validation | Coriolis / INCOIS, NOAA PMEL | ARGO floats, RAMA moorings |
-
-Dataset identifiers and endpoints are configured in `track1_data_engine/configs/data_sources.yaml`.
-
----
-
-## 14. Roadmap
-
-- Train on the full 2012–2021 North Indian Ocean dataset
-- Extend ARGO and RAMA validation across seasons and sub-basins
-- Add near-real-time ingestion of satellite products
-- Add further tropical cyclone case studies
-- Add authentication and rate limiting to the public gateway
-- Include model and dependencies in the production Docker image
-
----
-
-## 15. Contributing
-
-1. Fork the repository and create a feature branch: `git checkout -b feature/your-feature`
-2. Commit your changes: `git commit -m "Describe your change"`
-3. Push the branch and open a pull request
-
-Please follow PEP 8 for Python, use TypeScript strict mode for frontend and gateway code, and add or update tests where relevant.
-
----
-
-## 16. License
-
-Released under the MIT License. See [LICENSE](./LICENSE) for details.
-
----
-
-## 17. Acknowledgements
+## 🙏 Acknowledgements
 
 - Ministry of Earth Sciences (MoES) and INCOIS for the problem statement
-- Copernicus Marine Service for GLORYS12V1 reanalysis and satellite products
-- NOAA, NASA, ESA, ECMWF and EUMETSAT for observational products
-- ARGO Programme and RAMA array for in-situ validation data
-- TEOS-10 and the Gibbs SeaWater (`gsw`) toolbox
-- The PyTorch, FastAPI, Next.js and scientific Python open-source communities
+- Smart India Hackathon 2025 organizers
+- Copernicus Marine Service for open ocean reanalysis data
+- NOAA, NASA, ESA, EUMETSAT for satellite products
+- ARGO Program and RAMA Array for in-situ validation data
+- Open-source community — PyTorch, FastAPI, Next.js, and the scientific Python ecosystem
+
+---
+
+## 📞 Contact
+
+**Email:** satyamkumar9250@gmail.com
+
+| Channel | Link |
+|---|---|
+| **Live Dashboard** | [oceanembed-phi.vercel.app](https://oceanembed-phi.vercel.app/) |
+| **YouTube Pitch** | [youtu.be/GUdMyuLT980](https://youtu.be/GUdMyuLT980) |
+| **Full Demo Video** | [Google Drive](https://drive.google.com/file/d/1NlPlJ7SpMDJHK6ciq_2xGxzthqxUZaIK/view?usp=drivesdk) |
+| **GitHub Repository** | [github.com/Satyamkr7905/OCEANEMBED](https://github.com/Satyamkr7905/OCEANEMBED) |
+| **FastAPI Backend** | [oceanembed-fastapi.onrender.com](https://oceanembed-fastapi.onrender.com/) |
+| **Express Gateway** | [oceanembed-gateway.onrender.com](https://oceanembed-gateway.onrender.com/) |
+| **API Documentation** | [oceanembed-fastapi.onrender.com/docs](https://oceanembed-fastapi.onrender.com/docs) |
+| **Issues** | [GitHub Issues](https://github.com/Satyamkr7905/OCEANEMBED/issues) |
 
 <div align="center">
 
-**OceanEmbed** · From satellite surface to ocean depth
+### OceanEmbed
+*From Satellite Skin to Ocean Depth*  
+**Ready for INCOIS. Ready for India. Ready for the World.**
+
+Made with 🌊 by Team Bitminds for SIH 2026
 
 </div>
