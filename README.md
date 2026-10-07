@@ -270,7 +270,7 @@ OceanEmbed/
 
 #### 1. Clone the Repository
 ```bash
-git clone https://github.com/Satyamkr7905/OCEANEMBED.git
+git clone https://github.com/Jashwanth006/OCEANEMBED.git
 cd OCEANEMBED
 ```
 
@@ -513,18 +513,19 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## 📞 Contact
 
-**Email:** satyamkumar9250@gmail.com
+**Email:** jashwanthp006@gmail.com
+
 
 | Channel | Link |
 |---|---|
 | **Live Dashboard** | [oceanembed-phi.vercel.app](https://oceanembed-phi.vercel.app/) |
 | **YouTube Pitch** | [youtu.be/GUdMyuLT980](https://youtu.be/GUdMyuLT980) |
 | **Full Demo Video** | [Google Drive](https://drive.google.com/file/d/1NlPlJ7SpMDJHK6ciq_2xGxzthqxUZaIK/view?usp=drivesdk) |
-| **GitHub Repository** | [github.com/Satyamkr7905/OCEANEMBED](https://github.com/Satyamkr7905/OCEANEMBED) |
+|
 | **FastAPI Backend** | [oceanembed-fastapi.onrender.com](https://oceanembed-fastapi.onrender.com/) |
 | **Express Gateway** | [oceanembed-gateway.onrender.com](https://oceanembed-gateway.onrender.com/) |
 | **API Documentation** | [oceanembed-fastapi.onrender.com/docs](https://oceanembed-fastapi.onrender.com/docs) |
-| **Issues** | [GitHub Issues](https://github.com/Satyamkr7905/OCEANEMBED/issues) |
+
 
 <div align="center">
 
